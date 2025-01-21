@@ -1,30 +1,33 @@
-name: Build and Push Docker Image
+name: Build and Push Multi-Platform Docker Image
 
 on:
   push:
     branches:
-      - main  # Dieser Workflow wird nur ausgelöst, wenn Änderungen in den main-Branch gepusht werden
+      - main
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      # Checke den Code aus dem Repository aus
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-      # Logge dich in deine Docker-Registry ein
-      - name: Login to Docker Registry
-        run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ secrets.REGISTRY_URL }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
 
-      # Baue das Docker-Image
-      - name: Build Docker Image
-        run: |
-          docker build -t ${{ secrets.REGISTRY_URL }}/budetab-backend:latest .
+    - name: Log in to Docker Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ secrets.REGISTRY_URL }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Push das Docker-Image in die Registry
-      - name: Push Docker Image
-        run: |
-          docker push ${{ secrets.REGISTRY_URL }}/budetab-backend:latest
+    - name: Build and Push Image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ secrets.REGISTRY_URL }}/budetab-backend:latest
+        platforms: linux/amd64,linux/arm64

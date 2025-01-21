@@ -15,9 +15,9 @@ jobs:
         uses: actions/checkout@v3
 
       # Logge dich in deine Docker-Registry ein
-      #- name: Login to Docker Registry
-      #  run: |
-      #    echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ secrets.REGISTRY_URL }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+      - name: Login to Docker Registry
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ secrets.REGISTRY_URL }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
 
       # Baue das Docker-Image
       - name: Build Docker Image

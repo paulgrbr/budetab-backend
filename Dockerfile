@@ -1,6 +1,9 @@
 # Wähle das Basis-Image
 FROM python:3.13.0-slim
 
+# Install PostgreSQL development libraries required for psycopg2
+RUN apt-get update && apt-get install -y libpq-dev gcc
+
 # Setze den Arbeitsverzeichnispfad
 WORKDIR /app
 

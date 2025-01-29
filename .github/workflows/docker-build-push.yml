@@ -24,10 +24,10 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Install PostgreSQL Dependencies (libpq-dev)
+    - name: Install PostgreSQL Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libpq-dev
+        sudo apt-get install -y libpq-dev gcc python3-dev build-essential
 
     - name: Set up Python Environment
       uses: actions/setup-python@v4

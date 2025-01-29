@@ -17,7 +17,7 @@ jobs:
       POSTGRES_AUTH_PW: ${{ secrets.POSTGRES_AUTH_PW }}
       POSTGRES_PUBLIC_USER: ${{ secrets.POSTGRES_PUBLIC_USER }}
       POSTGRES_PUBLIC_PW: ${{ secrets.POSTGRES_PUBLIC_PW }}
-      POSTGRES_DB_NAME: ${{ var.POSTGRES_DB_NAME }}
+      POSTGRES_DB_NAME: ${{ vars.POSTGRES_DB_NAME }}
       DEBUG_MODE: "true"
       
     steps:

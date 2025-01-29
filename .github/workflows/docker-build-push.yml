@@ -1,13 +1,25 @@
-name: Test, Build, and Push Multi-Platform Docker Image
+name: Test, Build, and Push Docker Image (Main)
 
 on:
   push:
     branches:
-      - main
+      - main  # Läuft bei Pushes auf main
+  pull_request:
+    branches:
+      - main  # Läuft bei Pull Requests auf main
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    env:
+      POSTGRES_AUTH_USER: ${{ secrets.POSTGRES_AUTH_USER }}
+      POSTGRES_AUTH_PW: ${{ secrets.POSTGRES_AUTH_PW }}
+      POSTGRES_PUBLIC_USER: ${{ secrets.POSTGRES_PUBLIC_USER }}
+      POSTGRES_PUBLIC_PW: ${{ secrets.POSTGRES_PUBLIC_PW }}
+      POSTGRES_DB_NAME: ${{ var.POSTGRES_DB_NAME }}
+      DEBUG_MODE: "true"
+      
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3

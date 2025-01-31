@@ -65,5 +65,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.REGISTRY_URL }}/budetab-backend:dev
+            ${{ secrets.REGISTRY_URL }}/budetab-backend-dev:latest
           platforms: linux/amd64,linux/arm64

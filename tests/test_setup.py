@@ -8,7 +8,7 @@ from testcontainers.postgres import PostgresContainer
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 from app import *
 # Path to the SQL initialization file
-INIT_SQL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../sql/init.sql'))
+INIT_SQL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../sql/pytest.sql'))
 
 
 # Setup mock database
@@ -74,3 +74,23 @@ def setup_schema():
     conn.commit()
     cursor.close()
     conn.close()
+
+# @pytest.fixture(scope="function", autouse=True)
+# def setup_account_entry():
+#     # Initialize the database with SQL script
+#     conn = psycopg2.connect(
+#         host=postgres.get_container_host_ip(),
+#         port=postgres.get_exposed_port(5432),
+#         user=postgres.username,
+#         password=postgres.password,
+#         dbname="bude_transactions"
+#     )
+#     conn.autocommit = True
+#     cursor = conn.cursor()
+#     # Read and execute the SQL script
+#     cursor.execute("""
+#                  INSERT INTO account(public_id, username, password_hash)
+#                  VALUES('07b05ff3-0d08-4bad-9ea3-4d46f0a4f5d2', 'test_user', '****')
+#                  """)
+#     cursor.close()
+#     conn.close()

@@ -4,6 +4,9 @@ FROM python:3.13.0-slim
 # Install PostgreSQL development libraries required for psycopg2
 RUN apt-get update && apt-get install -y libpq-dev gcc
 
+# Set environment variables
+ENV PYTHONUNBUFFERED 1
+
 # Setze den Arbeitsverzeichnispfad
 WORKDIR /app
 
@@ -19,3 +22,4 @@ EXPOSE 8085
 
 # Starte den Flask-Server
 CMD ["python", "app.py"]
+# CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "src.app:app"]

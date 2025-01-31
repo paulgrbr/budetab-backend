@@ -1,8 +1,12 @@
+from datetime import datetime
 import os
 import sys
+import bcrypt
 import uuid
 import bcrypt
 import psycopg2
+from models.Account import Account
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), './')))
 from connection import *
 
@@ -12,7 +16,7 @@ def create_account(username: str, password: str):
         cur = conn.cursor()
 
         # Hash the password
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
         # Generate a user UUID
         user_uuid = str(uuid.uuid4())
@@ -47,3 +51,39 @@ def get_pg_version():
     cur.close()
     conn.close()
     return version
+
+def get_accounts_by_username(username: str):
+    conn = get_public_db_connection()
+    cur = conn.cursor()
+
+    cur.execute('''
+                SELECT public_id, username, password_hash, time_created, linked_user_id
+                FROM account
+                WHERE username = %s
+                ''', 
+                ( username, ))
+    response = cur.fetchall()
+    parsed_response = []
+    for row in response:
+        parsed_response.append(Account(row[0], row[1], row[2].tobytes(), row[3], row[4]))
+    cur.close()
+    conn.close()
+    
+    return parsed_response
+
+
+def get_my_account(public_id : uuid):
+    conn = get_public_db_connection()
+    cur = conn.cursor()
+
+    cur.execute('''
+                SELECT public_id, username, time_created, linked_user_id
+                FROM account
+                WHERE public_id = %s
+                ''', 
+                ( public_id, ))
+    response = cur.fetchone()
+    cur.close()
+    conn.close()
+    print(response)
+    return Account(response[0], response[1], None, response[2], response[3])

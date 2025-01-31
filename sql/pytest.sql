@@ -123,7 +123,7 @@ CREATE TABLE register_transactions(
         ) 
 );
 
-CREATE USER public_user WITH PASSWORD 'supersecurepassword';
+CREATE USER {db_public_user} WITH PASSWORD '{db_public_user_pw}';
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
 REVOKE ALL ON SCHEMA public FROM public_user;
 GRANT CONNECT ON DATABASE bude_transactions TO public_user;

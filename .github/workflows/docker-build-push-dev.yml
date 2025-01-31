@@ -18,6 +18,8 @@ jobs:
       POSTGRES_PUBLIC_USER: ${{ secrets.POSTGRES_PUBLIC_USER }}
       POSTGRES_PUBLIC_PW: ${{ secrets.POSTGRES_PUBLIC_PW }}
       POSTGRES_DB_NAME: ${{ vars.POSTGRES_DB_NAME }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
       DEBUG_MODE: "true"
 
     steps:

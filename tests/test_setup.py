@@ -67,7 +67,9 @@ def setup_schema():
     cursor = conn.cursor()
     # Read and execute the SQL script
     with open(INIT_SQL_PATH, "r") as sql_file:
-        sql_script = sql_file.read()
+        sql_script = sql_file.read().format(db_public_user=os.environ['POSTGRES_PUBLIC_USER'], 
+                                            db_public_user_pw=os.environ['POSTGRES_PUBLIC_PW']
+                                            )
         cursor.execute(sql_script)
     conn.commit()
     cursor.close()

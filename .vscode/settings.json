@@ -1,9 +1,17 @@
 {
   "python.analysis.autoImportCompletions": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "notebook.defaultFormatter": "esbenp.prettier-vscode",
   "python.testing.pytestArgs": ["tests"],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
-  "cSpell.words": ["jsonify", "tobytes"]
+  "cSpell.words": [
+    "checkpw",
+    "jsonify",
+    "tobytes"
+  ],
+  "editor.defaultFormatter": "ms-python.autopep8",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.autopep8"
+  },
+  "editor.formatOnSave": true,
 }
+

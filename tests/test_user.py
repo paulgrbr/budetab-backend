@@ -1,8 +1,12 @@
 from email import message
+import io
 import os
 import sys
 import pytest
 from test_setup import get_mock_JWT_access_token, setup, setup_schema, setup_account_entry, setup_user_entry
+from PIL import Image
+import numpy as np
+from skimage.metrics import structural_similarity as ssim
 
 # Add to the Python path
 sys.path.append(os.path.abspath(
@@ -85,6 +89,9 @@ def test_get_all_users_success(client, setup_account_entry, setup_user_entry):
 
     assert "permissions" in data["message"][0], "Permissions variable is missing in response"
     assert data["message"][0]["permissions"] == "user"
+
+    # Ensure right amount of users are listed
+    assert len(data["message"]) == 3, "Expected amount of users doesn't match"
 
 
 def test_create_user_success(client):
@@ -172,4 +179,53 @@ def test_delete_user_success(client, setup_account_entry, setup_user_entry):
     response = client.get('/user/', headers=headers)
     data = response.get_json()
     message = data["message"]
-    assert len(message) == 2
+    assert len(message) == 2, "Expected amount of users doesn't match"
+
+
+def calculate_ssim(image1, image2):
+    # Resize the retrieved image to match the original image
+    image2 = image2.resize(image1.size, Image.LANCZOS)
+
+    image1 = np.array(image1.convert("L"))  # Convert to grayscale
+    image2 = np.array(image2.convert("L"))  # Convert to grayscale
+    return ssim(image1, image2)
+
+
+def test_upload_and_get_my_profile_picture(client, setup_account_entry, setup_user_entry):
+    # Test profile picture upload
+    access_token = get_mock_JWT_access_token(False)
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Step 1: Read a real image from disk
+    image_path = "tests/fixtures/profile.png"
+    assert os.path.exists(image_path), "Test image does not exist!"
+
+    with open(image_path, "rb") as img_file:
+        image_data = img_file.read()
+
+    # Step 2: Upload the image
+    response = client.post(
+        "/user/profile-picture",
+        data={"file": (io.BytesIO(image_data), "profile.png")},
+        content_type="multipart/form-data",
+        headers=headers
+    )
+
+    assert response.status_code == 201, f"Expected status code 201, but got {
+        response.status_code}"
+    assert response.json["message"]["status"] == "Picture uploaded successfully", "Error while parsing message"
+
+    # Step 3: Retrieve the image
+    response = client.get("/user/profile-picture", headers=headers)
+
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"
+    retrieved_img_bytes = io.BytesIO(response.data)
+
+    # Step 4: Compare properties of original & retrieved image
+    original_img = Image.open(io.BytesIO(image_data))
+    retrieved_img = Image.open(retrieved_img_bytes)
+
+    # Compute Structural Similarity Index (SSIM)
+    similarity = calculate_ssim(original_img, retrieved_img)
+    assert similarity >= 0.94, f"Images are not visually similar enough! SSIM: {similarity:.4f}"

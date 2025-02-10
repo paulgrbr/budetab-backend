@@ -22,7 +22,6 @@ def get_user_by_linked_account_uuid(account_public_id: uuid):
     response = cur.fetchone()
     cur.close()
     conn.close()
-    print(response)
     if response:
         return User(response[0], response[1], response[2], response[3],
                     response[4], response[5], response[6])
@@ -113,3 +112,48 @@ def delete_user_by_user_id(user_id: str):
         conn.close()
         return {"error": {"exception": Err.__class__.__name__, "message": str(
             Err.diag.message_primary), "pgCode": Err.pgcode}, "message": None}, 500
+
+
+def update_user_profile_picture_path(user_id: uuid, path: str):
+    try:
+        conn = get_auth_db_connection()
+        cur = conn.cursor()
+        print(user_id, path)
+
+        cur.execute('''
+                    UPDATE "user"
+                    SET profile_picture_path = %s
+                    WHERE user_id = %s
+                    ''',
+                    (
+                        path,
+                        user_id,
+                    ))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"error": None, "message": {"status": "Picture uploaded successfully", "uuid": user_id}}
+
+    except psycopg2.Error as Err:
+        conn.rollback()
+        conn.close()
+        return {"error": {"exception": Err.__class__.__name__, "message": str(
+            Err.diag.message_primary), "pgCode": Err.pgcode}, "message": None}
+
+
+def get_profile_picture_path_by_user_id(user_id: uuid):
+    conn = get_auth_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+                SELECT profile_picture_path
+                FROM "user"
+                WHERE user_id = %s
+                ''',
+                (user_id, ))
+    response = cur.fetchone()
+    cur.close()
+    conn.close()
+    if response:
+        return response[0]
+    else:
+        return None

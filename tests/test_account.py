@@ -1,3 +1,4 @@
+import json
 from test_setup import get_mock_JWT_access_token, get_mock_JWT_refresh_token
 import os
 import sys
@@ -139,3 +140,89 @@ def test_link_user_to_account_success(client, setup_account_entry, setup_user_en
 
     data = response.get_json()
     assert data["message"]["userId"] == "0becd0ae-fd81-4f54-9685-160eed903b31"
+
+
+def test_get_all_accounts_success(client, setup_account_entry):
+    access_token = get_mock_JWT_access_token(True)
+
+    # Use access token to GET /account/me
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = client.get('/account/', headers=headers)
+
+    # Ensure request is successful
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"
+    data = response.get_json()
+
+    # Ensure expected fields exist and are correct
+    assert "message" in data, "Missing user data in response"
+    assert "username" in data["message"][0], "Username missing in response"
+    assert data["message"][0]["username"] == "test_user"
+
+    # Ensure right amount of accounts are listed
+    assert len(data["message"]) == 3, "Expected amount of accounts doesn't match"
+
+
+def test_change_password_by_user_success(client, setup_account_entry):
+    # Test successful pw change
+    access_token = get_mock_JWT_access_token(False)
+
+    # Use access token to PATCH /password
+    headers = {"Authorization": f"Bearer {access_token}"}
+    payload = {
+        "password": "NewPassword123"
+    }
+
+    response = client.patch('/account/password', headers=headers, json=payload)
+
+    # Assert the response status code is 200 PATCH
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"
+
+    # Extract the JSON response
+    response_data = response.get_json()
+    # Assert the account update
+    assert response_data["message"]["uuid"] == "d0192fdf-56ee-4aab-81e2-36667414c0b1", f"Expected userId to be 'd0192fdf-56ee-4aab-81e2-36667414c0b1', but got {
+        response_data['message']}"
+
+    # Test successful login with new password
+    payload = {"username": "test_user", "password": "NewPassword123"}
+    response = client.post('/account/login', json=payload)
+
+    # Assert the response status code is 200 Ok
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"
+
+
+def test_reset_password_by_admin_success(client, setup_account_entry):
+    # Test failed login with wrong pw
+    payload = {"username": "test_user", "password": "BudeBerkach2025"}
+    response = client.post('/account/login', json=payload)
+    # Assert the response status code is 401 Unauth
+    assert response.status_code == 401, f"Expected status code 401, but got {
+        response.status_code}"
+
+    # Test successful pw reset by admin
+    access_token = get_mock_JWT_access_token(True)
+
+    # Use access token to DELETE password
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = client.delete('/account/password/d0192fdf-56ee-4aab-81e2-36667414c0b1', headers=headers)
+
+    # Assert the response status code is 200 PATCH
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"
+
+    # Extract the JSON response
+    response_data = response.get_json()
+    # Assert the account update
+    assert response_data["message"]["uuid"] == "d0192fdf-56ee-4aab-81e2-36667414c0b1", f"Expected userId to be 'd0192fdf-56ee-4aab-81e2-36667414c0b1', but got {
+        response_data['message']}"
+
+    # Test successful login with new password
+    payload = {"username": "test_user", "password": "BudeBerkach2025"}
+    response = client.post('/account/login', json=payload)
+
+    # Assert the response status code is 200 Ok
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"

@@ -153,4 +153,5 @@ GRANT SELECT ON TABLE account TO {db_auth_user};
 GRANT UPDATE ON TABLE account TO {db_auth_user};
 GRANT INSERT ON TABLE "user" TO {db_auth_user};
 GRANT SELECT ON TABLE "user" TO {db_auth_user};
+GRANT UPDATE ON TABLE "user" TO {db_auth_user};
 GRANT DELETE ON TABLE "user" TO {db_auth_user};

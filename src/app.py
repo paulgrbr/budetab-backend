@@ -1,12 +1,18 @@
 import os
+import logging
 from flask import Flask
 from flask_compress import Compress
+from flask_jwt_extended import verify_jwt_in_request
 from endpoints.account import *
 from endpoints.user import *
 from endpoints.jwt_handlers import jwt
 
 app = Flask(__name__)
 Compress(app)
+
+# Environment check for production
+RUN_ENV = os.environ.get('RUN_ENV', 'PROD')
+# Loging!!
 
 # Configuration
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
@@ -15,7 +21,8 @@ app.config['JWT_TOKEN_LOCATION'] = ['headers']
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 60 * \
     30  # 1 hour expiry for access tokens
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 60 * \
-    60*24*14  # 24 hours expiry for refresh tokens
+    60 * 24 * 14  # 24 hours expiry for refresh tokens
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10MB (in bytes)
 
 jwt.init_app(app)
 
@@ -25,6 +32,7 @@ app.register_blueprint(users, url_prefix='/user')
 
 if __name__ == "__main__":
     env_vars = [
+        "RUN_ENV",
         "POSTGRES_HOST",
         "POSTGRES_PORT",
         "POSTGRES_AUTH_USER",

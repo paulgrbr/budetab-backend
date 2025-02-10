@@ -125,3 +125,50 @@ def update_link_user_to_account(public_id: uuid, user_id: uuid):
         conn.close()
         return {"error": {"exception": Err.__class__.__name__, "message": str(
             Err.diag.message_primary), "pgCode": Err.pgcode}, "message": None}
+
+
+def get_all_accounts():
+    conn = get_auth_db_connection()
+    cur = conn.cursor()
+
+    cur.execute('''
+                SELECT public_id, username, time_created, linked_user_id
+                FROM account
+                ''')
+    response = cur.fetchall()
+    parsed_response = []
+    for row in response:
+        parsed_response.append(Account(row[0], row[1], "", row[2], row[3]))
+    cur.close()
+    conn.close()
+
+    return parsed_response
+
+
+def update_account_password(user_id: uuid, password: str):
+    try:
+        conn = get_auth_db_connection()
+        cur = conn.cursor()
+
+        # Hash the password
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+        cur.execute('''
+                    UPDATE account
+                    SET password_hash = %s
+                    WHERE public_id = %s
+                    ''',
+                    (
+                        hashed_password,
+                        user_id,
+                    ))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"error": None, "message": {"uuid": user_id, "message": "Password changed successfully"}}
+
+    except psycopg2.Error as Err:
+        conn.rollback()
+        conn.close()
+        return {"error": {"exception": Err.__class__.__name__, "message": str(
+            Err.diag.message_primary), "pgCode": Err.pgcode}, "message": None}

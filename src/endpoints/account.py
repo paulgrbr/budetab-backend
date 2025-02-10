@@ -1,7 +1,7 @@
 import bcrypt
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
-from database_service.account import create_account, get_pg_version, get_all_accounts_by_username, get_account_by_uuid, update_link_user_to_account
+from database_service.account import create_account, get_all_accounts, get_pg_version, get_all_accounts_by_username, get_account_by_uuid, update_account_password, update_link_user_to_account
 from database_service.sqlstate import map_sqlstate_to_http_status
 import re
 from database_service.user import get_user_by_linked_account_uuid
@@ -14,9 +14,8 @@ accounts = Blueprint('accounts', __name__)
 usernamePattern = r"^[a-z0-9_]+$"
 passwordPattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?!.*\s).{8,}$"
 
+
 # Register user route
-
-
 @accounts.route("/register", methods=['POST'])
 def handle_register():
     try:
@@ -139,8 +138,8 @@ def handle_get_my_account():
         # Check if user exists
         if account:
             return jsonify({"error": None, 'message': {'username': account.username,
-                                                       'time_created': account.time_created,
-                                                       'linked_user_id': account.linked_user_id
+                                                       'timeCreated': account.time_created,
+                                                       'linkedUserId': account.linked_user_id
                                                        }}), 200
         else:
             return jsonify({"error": None, 'message': 'User not found'}), 404
@@ -168,6 +167,88 @@ def handle_link_user(public_id):
                            "message": "Please provide an userId to link account to"}, "message": None}), 400
 
         return update_link_user_to_account(public_id, linked_user_id)
+
+    except Exception as e:
+        # Log the error
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
+
+
+# Get User Account
+@accounts.route("/", methods=['GET'])
+@jwt_required()
+@roles_required("admin")
+def handle_get_all_accounts():
+    try:
+        accounts = get_all_accounts()
+
+        # Check if user list is empty
+        if not accounts:  # Check if list is empty
+            return jsonify({"error": {"exception": "AccountNotFound",
+                           "message": "No accounts were found"}, "message": None}), 404
+
+        # Convert all users to JSON format
+        return jsonify({
+            "error": None,
+            "message": [{
+                'publicId': account.public_id,
+                'username': account.username,
+                'timeCreated': account.time_created,
+                'linkedUserId': account.linked_user_id
+            } for account in accounts]
+        }), 200
+
+    except Exception as e:
+        # Log the error
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
+
+
+@accounts.route("/password", methods=['PATCH'])
+@jwt_required()
+@roles_required("admin", "user")
+def handle_change_password_by_user():
+    try:
+        # Extract the user ID from the JWT
+        user_id = get_jwt_identity()
+        # Parse JSON data
+        data = request.get_json()
+
+        password = data.get('password')
+        if not password:
+            return jsonify({"error": {"exception": "MissingValues",
+                           "message": "Missing Password"}, "message": None}), 400
+
+        # Check if pattern matches
+        if not re.match(passwordPattern, password):
+            return jsonify({"error": {"exception": "WrongPasswordFormat",
+                           "message": "Password must at least be 8 characters long and contain upper and lowercase letters and numbers"}, "message": None}), 400
+
+        # Update the account
+        response = update_account_password(user_id, password)
+        if response["error"]:
+            return jsonify(response), map_sqlstate_to_http_status(response["error"]["pgCode"])
+        else:
+            return jsonify(response), 200
+
+    except Exception as e:
+        # Log the error
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
+
+
+# Change password by admin
+@accounts.route("/password/<public_id>", methods=['DELETE'])
+@jwt_required()
+@roles_required("admin")
+def handle_change_password_by_admin(public_id):
+    try:
+        # Update the account
+        response = update_account_password(public_id, "BudeBerkach2025")
+        if response["error"]:
+            return jsonify(response), map_sqlstate_to_http_status(response["error"]["pgCode"])
+        else:
+            return jsonify(response), 200
 
     except Exception as e:
         # Log the error

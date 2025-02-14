@@ -1,6 +1,18 @@
 version: "3.9"  # Specify the Docker Compose version
 
 services:
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: budetab-backend
+    restart: always
+    ports:
+      - "8085:8085"
+    env_file:
+      - .env
+
   postgres:
     image: postgres:17  # PostgreSQL 17 image
     container_name: postgres17  # Name of the container

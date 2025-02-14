@@ -157,3 +157,66 @@ def get_profile_picture_path_by_user_id(user_id: uuid):
         return response[0]
     else:
         return None
+
+
+def get_user_by_user_id(user_id: uuid):
+    conn = get_auth_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+                SELECT u.user_id, u.first_name, u.last_name, u.time_created, u.is_temporary, u.price_ranking, u.permissions
+                FROM "user" u
+                WHERE u.user_id = %s
+                ''',
+                (user_id, ))
+    response = cur.fetchone()
+    cur.close()
+    conn.close()
+    if response:
+        return User(response[0], response[1], response[2], response[3],
+                    response[4], response[5], response[6])
+    else:
+        return None
+
+
+def update_user(user_id: uuid, first_name: str, last_name: str,
+                is_temporary: bool, price_ranking: str, permissions: str):
+    try:
+        conn = get_auth_db_connection()
+        cur = conn.cursor()
+
+        cur.execute('''
+                    UPDATE "user"
+                    SET first_name = %s,
+                        last_name = %s,
+                        is_temporary = %s,
+                        price_ranking = %s,
+                        permissions = %s
+                    WHERE user_id = %s;
+                    ''',
+                    (
+                        first_name,
+                        last_name,
+                        is_temporary,
+                        price_ranking,
+                        permissions,
+                        user_id
+
+                    ))
+
+        if cur.rowcount == 0:
+            # No user found with the given user_id
+            conn.rollback()
+            cur.close()
+            conn.close()
+            return {"error": {"exception": "UserNotFound", "message": "User with user_id not found"}, "message": None}
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"error": None, "message": {"uuid": user_id, "status": "User updated successfully"}}
+
+    except psycopg2.Error as Err:
+        conn.rollback()  # Rollback in case of error
+        conn.close()
+        return {"error": {"exception": Err.__class__.__name__, "message": str(
+            Err.diag.message_primary), "pgCode": Err.pgcode}, "message": None}

@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main # Läuft bei Pushes auf main
-  pull_request:
-    branches:
-      - main # Läuft bei Pull Requests auf main
 
 jobs:
   test:

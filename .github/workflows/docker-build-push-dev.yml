@@ -1,12 +1,12 @@
-name: Test, Build, Push (Main)
+name: Test, Build, Push (Dev)
 
 on:
   push:
     branches:
-      - main # Läuft bei Pushes auf main
+      - development
   pull_request:
     branches:
-      - main # Läuft bei Pull Requests auf main
+      - development
 
 jobs:
   test:
@@ -67,5 +67,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.REGISTRY_URL }}/budetab-backend:latest
+            ${{ secrets.REGISTRY_URL }}/budetab-backend-dev:latest
           platforms: linux/amd64,linux/arm64

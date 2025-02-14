@@ -10,6 +10,11 @@ CREATE TYPE PRICE_CATEGORY AS ENUM (
     'big_event'
 );
 
+CREATE TYPE USER_PERMS AS ENUM (
+    'admin', 
+    'user'
+);
+
 CREATE TABLE "user" (
     user_id UUID PRIMARY KEY,
     first_name VARCHAR(255) NOT NULL,
@@ -17,15 +22,18 @@ CREATE TABLE "user" (
     time_created TIMESTAMPTZ DEFAULT NOW(),
     is_temporary BOOLEAN NOT NULL,
     price_ranking PRICE_RANKING DEFAULT 'external',
-    profile_picture_path TEXT
+    profile_picture_path TEXT,
+    permissions USER_PERMS DEFAULT 'user'
 );
 
 CREATE TABLE account (
     public_id UUID PRIMARY KEY,
     username VARCHAR(36) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash BYTEA NOT NULL,
     time_created TIMESTAMPTZ DEFAULT NOW(),
-    linked_user_id UUID REFERENCES "user"(user_id),
+    linked_user_id UUID REFERENCES "user"(user_id)
+                        ON DELETE SET NULL
+                        ON UPDATE CASCADE,
     CONSTRAINT username_format CHECK (username ~ '^[a-zA-Z0-9_]+$')
 );
 
@@ -123,11 +131,27 @@ CREATE TABLE register_transactions(
         ) 
 );
 
+-- User public
 CREATE USER {db_public_user} WITH PASSWORD '{db_public_user_pw}';
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
-REVOKE ALL ON SCHEMA public FROM public_user;
-GRANT CONNECT ON DATABASE bude_transactions TO public_user;
-GRANT USAGE ON SCHEMA public TO public_user;
--- User grants
-GRANT INSERT ON TABLE account TO public_user;
-GRANT SELECT ON TABLE account TO public_user;
+REVOKE ALL ON SCHEMA public FROM {db_public_user};
+GRANT CONNECT ON DATABASE bude_transactions TO {db_public_user};
+GRANT USAGE ON SCHEMA public TO {db_public_user};
+
+GRANT INSERT ON TABLE account TO {db_public_user};
+GRANT SELECT ON TABLE account TO {db_public_user};
+
+-- User authed
+CREATE USER {db_auth_user} WITH PASSWORD '{db_auth_user_pw}';
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM {db_auth_user};
+GRANT CONNECT ON DATABASE bude_transactions TO {db_auth_user};
+GRANT USAGE ON SCHEMA public TO {db_auth_user};
+
+GRANT INSERT ON TABLE account TO {db_auth_user};
+GRANT SELECT ON TABLE account TO {db_auth_user};
+GRANT UPDATE ON TABLE account TO {db_auth_user};
+GRANT INSERT ON TABLE "user" TO {db_auth_user};
+GRANT SELECT ON TABLE "user" TO {db_auth_user};
+GRANT UPDATE ON TABLE "user" TO {db_auth_user};
+GRANT DELETE ON TABLE "user" TO {db_auth_user};

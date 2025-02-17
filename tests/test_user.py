@@ -56,6 +56,40 @@ def test_get_my_user_success(client, setup_account_entry, setup_user_entry):
     assert data["message"]["permissions"] == "user"
 
 
+def test_get_specific_user_success(client, setup_account_entry, setup_user_entry):
+    access_token = get_mock_JWT_access_token(True)
+
+    # Use access token to GET /user/<user_id>
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = client.get('/user/95cebd35-2489-4dbf-b379-a1f901875831', headers=headers)
+
+    # Ensure request is successful
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"
+    data = response.get_json()
+
+    # Ensure expected fields exist and are correct
+    assert "message" in data, "Missing user data in response"
+
+    assert "userId" in data["message"], "UUID missing in response"
+    assert data["message"]["userId"] == "95cebd35-2489-4dbf-b379-a1f901875831"
+
+    assert "firstName" in data["message"], "First Name missing in response"
+    assert data["message"]["firstName"] == "Test"
+
+    assert "lastName" in data["message"], "Last Name missing in response"
+    assert data["message"]["lastName"] == "User"
+
+    assert "isTemporary" in data["message"], "Is Temporary is missing in response"
+    assert data["message"]["isTemporary"] == False
+
+    assert "priceRanking" in data["message"], "Price ranking missing in response"
+    assert data["message"]["priceRanking"] == "regular"
+
+    assert "permissions" in data["message"], "Permissions variable is missing in response"
+    assert data["message"]["permissions"] == "user"
+
+
 def test_get_all_users_success(client, setup_account_entry, setup_user_entry):
     access_token = get_mock_JWT_access_token(False)
 
@@ -190,7 +224,7 @@ def calculate_ssim(image1, image2):
     return ssim(image1, image2)
 
 
-def test_upload_and_get_my_profile_picture(client, setup_account_entry, setup_user_entry):
+def test_upload_and_get_my_profile_picture_success(client, setup_account_entry, setup_user_entry):
     # Test profile picture upload
     access_token = get_mock_JWT_access_token(False)
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -228,3 +262,99 @@ def test_upload_and_get_my_profile_picture(client, setup_account_entry, setup_us
     # Compute Structural Similarity Index (SSIM)
     similarity = calculate_ssim(original_img, retrieved_img)
     assert similarity >= 0.94, f"Images are not visually similar enough! SSIM: {similarity:.4f}"
+
+
+def test_upload_and_get_my_profile_picture_by_admin_success(client, setup_account_entry, setup_user_entry):
+    # Test profile picture upload
+    access_token = get_mock_JWT_access_token(True)
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Step 1: Read a real image from disk
+    image_path = "tests/fixtures/profile.png"
+    assert os.path.exists(image_path), "Test image does not exist!"
+
+    with open(image_path, "rb") as img_file:
+        image_data = img_file.read()
+
+    # Step 2: Upload the image
+    response = client.post(
+        "/user/profile-picture/0becd0ae-fd81-4f54-9685-160eed903b31",
+        data={"file": (io.BytesIO(image_data), "profile.png")},
+        content_type="multipart/form-data",
+        headers=headers
+    )
+
+    assert response.status_code == 201, f"Expected status code 201, but got {
+        response.status_code}"
+    assert response.json["message"]["status"] == "Picture uploaded successfully", "Error while parsing message"
+
+    # Step 3: Retrieve the image
+    response = client.get("/user/profile-picture/0becd0ae-fd81-4f54-9685-160eed903b31", headers=headers)
+
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"
+    retrieved_img_bytes = io.BytesIO(response.data)
+
+    # Step 4: Compare properties of original & retrieved image
+    original_img = Image.open(io.BytesIO(image_data))
+    retrieved_img = Image.open(retrieved_img_bytes)
+
+    # Compute Structural Similarity Index (SSIM)
+    similarity = calculate_ssim(original_img, retrieved_img)
+    assert similarity >= 0.94, f"Images are not visually similar enough! SSIM: {similarity:.4f}"
+
+
+def test_update_user_success(client, setup_account_entry, setup_user_entry):
+    # Test successful registration
+    access_token = get_mock_JWT_access_token(True)
+
+    # Use access token to PUT /user
+    headers = {"Authorization": f"Bearer {access_token}"}
+    payload = {
+        "firstName": "John",
+        "lastName": "Doe",
+        "isTemporary": 'true',
+        "permissions": "admin",
+        "priceRanking": "member"
+    }
+    response = client.put('/user/0becd0ae-fd81-4f54-9685-160eed903b31', json=payload, headers=headers)
+
+    # Assert the response status code is 200 Updated
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"
+
+    # Extract the JSON response
+    response_data = response.get_json()
+
+    # Assert the response structure and content
+    assert response_data["error"] is None, f"Expected 'error' to be None, but got {
+        response_data['error']}"
+
+    # Check if changes applied
+    response = client.get('/user/0becd0ae-fd81-4f54-9685-160eed903b31', headers=headers)
+
+    # Ensure request is successful
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"
+    data = response.get_json()
+
+    # Ensure expected fields exist and are correct
+    assert "message" in data, "Missing user data in response"
+
+    assert "userId" in data["message"], "UUID missing in response"
+    assert data["message"]["userId"] == "0becd0ae-fd81-4f54-9685-160eed903b31"
+
+    assert "firstName" in data["message"], "First Name missing in response"
+    assert data["message"]["firstName"] == "John"
+
+    assert "lastName" in data["message"], "Last Name missing in response"
+    assert data["message"]["lastName"] == "Doe"
+
+    assert "isTemporary" in data["message"], "Is Temporary is missing in response"
+    assert data["message"]["isTemporary"] == True
+
+    assert "priceRanking" in data["message"], "Price ranking missing in response"
+    assert data["message"]["priceRanking"] == "member"
+
+    assert "permissions" in data["message"], "Permissions variable is missing in response"
+    assert data["message"]["permissions"] == "admin"

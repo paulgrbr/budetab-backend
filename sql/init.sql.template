@@ -49,6 +49,7 @@ CREATE TABLE product_category(
 CREATE TABLE product(
     product_id SERIAL PRIMARY KEY,
     product_picture_path TEXT,
+    product_name VARCHAR(255) NOT NULL, 
     category_id INT REFERENCES product_category(category_id)
                     ON DELETE SET NULL
                     ON UPDATE CASCADE,
@@ -155,3 +156,18 @@ GRANT INSERT ON TABLE "user" TO {db_auth_user};
 GRANT SELECT ON TABLE "user" TO {db_auth_user};
 GRANT UPDATE ON TABLE "user" TO {db_auth_user};
 GRANT DELETE ON TABLE "user" TO {db_auth_user};
+
+GRANT USAGE, SELECT ON SEQUENCE product_category_category_id_seq TO {db_auth_user};
+GRANT INSERT ON TABLE product_category TO {db_auth_user};
+GRANT SELECT ON TABLE product_category TO {db_auth_user};
+
+GRANT USAGE, SELECT ON SEQUENCE product_product_id_seq TO {db_auth_user};
+GRANT INSERT ON TABLE product TO {db_auth_user};
+GRANT SELECT ON TABLE product TO {db_auth_user};
+GRANT UPDATE ON TABLE product TO {db_auth_user};
+
+GRANT INSERT ON TABLE beverage TO {db_auth_user};
+GRANT SELECT ON TABLE beverage TO {db_auth_user};
+
+GRANT INSERT ON TABLE pricing TO {db_auth_user};
+GRANT SELECT ON TABLE pricing TO {db_auth_user};

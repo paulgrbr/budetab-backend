@@ -5,6 +5,8 @@ from flask_compress import Compress
 from flask_jwt_extended import verify_jwt_in_request
 from endpoints.account import *
 from endpoints.user import *
+from endpoints.product import *
+from endpoints.misc import *
 from endpoints.jwt_handlers import jwt
 
 app = Flask(__name__)
@@ -12,7 +14,7 @@ Compress(app)
 
 # Environment check for production
 RUN_ENV = os.environ.get('RUN_ENV', 'PROD')
-# Loging!!
+# Logging!!
 
 # Configuration
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
@@ -29,6 +31,10 @@ jwt.init_app(app)
 # Account endpoint
 app.register_blueprint(accounts, url_prefix='/account')
 app.register_blueprint(users, url_prefix='/user')
+app.register_blueprint(products, url_prefix='/product')
+
+app.register_blueprint(misc, url_prefix='/misc')
+
 
 if __name__ == "__main__":
     env_vars = [

@@ -119,6 +119,13 @@ def setup_user_entry():
     init_mock_sql(MOCK_FILE)
 
 
+@pytest.fixture(scope="function")
+# Initialize the database with SQL script
+def setup_product_entry():
+    MOCK_FILE = '../sql/mock_product.sql'
+    init_mock_sql(MOCK_FILE)
+
+
 def get_mock_JWT_access_token(is_admin: bool, identity: str = None):
     with app.app_context():
         if identity is None:

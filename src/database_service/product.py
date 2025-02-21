@@ -222,3 +222,86 @@ def get_product_picture_path_by_product_id(product_id: int):
         return response[0]
     else:
         return None
+
+
+def update_beverage(product_id: int, product_name: str, category_id: int, beverage_size: float, pricing: float):
+    try:
+        conn = get_auth_db_connection()
+        cur = conn.cursor()
+
+        cur.execute('''
+                    UPDATE "product"
+                    SET product_name = %s,
+                        category_id = %s
+                    WHERE product_id = %s;
+                    ''',
+                    (product_name, category_id, product_id))
+
+        if cur.rowcount == 0:
+            # No product found with the given product_id
+            conn.rollback()
+            cur.close()
+            conn.close()
+            return {"error": {"exception": "ProductNotFound", "message": "Beverage with productId not found"}, "message": None}
+
+        cur.execute('''
+                    UPDATE "beverage"
+                    SET beverage_size = %s
+                    WHERE product_id = %s;
+                    ''',
+                    (beverage_size, product_id))
+
+        PRICING_KEY_MAPPING = {
+            "normal": "normal",
+            "party": "party",
+            "bigEvent": "big_event"
+        }
+        pricing_values = [(price, PRICING_KEY_MAPPING[key], product_id) for key, price in pricing.items()]
+        # Bulk insert into pricing table
+        cur.executemany('''
+                        UPDATE pricing
+                        SET price = %s
+                        WHERE pricing_type = %s
+                        AND product_id = %s;
+                        ''',
+                        pricing_values,
+                        )
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"error": None, "message": {"productId": product_id, "status": "Beverage updated successfully"}}
+
+    except psycopg2.Error as Err:
+        conn.rollback()  # Rollback in case of error
+        conn.close()
+        return {"error": {"exception": Err.__class__.__name__, "message": str(
+            Err.diag.message_primary), "pgCode": Err.pgcode}, "message": None}
+
+
+def delete_product_by_product_id(product_id: int):
+    try:
+        conn = get_auth_db_connection()
+        cur = conn.cursor()
+        cur.execute('''
+            DELETE FROM "product"
+            WHERE product_id = %s
+            RETURNING product_id;
+                    ''',
+                    (product_id,))
+
+        deleted_product = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        if deleted_product:
+            return {"error": None, "message": f"Product {product_id} deleted successfully"}, 200
+        else:
+            return {"error": {"exception": "ProductNotFound", "message": "Product not found"}, "message": None}, 404
+
+    except psycopg2.Error as Err:
+        conn.rollback()
+        conn.close()
+        return {"error": {"exception": Err.__class__.__name__, "message": str(
+            Err.diag.message_primary), "pgCode": Err.pgcode}, "message": None}, 500

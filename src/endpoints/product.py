@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import jwt_required
-from database_service.product import create_beverage, create_category, get_all_beverages, get_all_product_categories, get_product_by_product_id, get_product_picture_path_by_product_id, update_product_picture_path
+from database_service.product import create_beverage, create_category, delete_product_by_product_id, get_all_beverages, get_all_product_categories, get_product_by_product_id, get_product_picture_path_by_product_id, update_beverage, update_product_picture_path
 from database_service.sqlstate import map_sqlstate_to_http_status
 import re
 from models.Product import ProductCategory
@@ -211,8 +211,8 @@ def process_image(file_path, output_size=512):
 @roles_required("admin")
 def handle_upload_product_picture(product_id):
     try:
-        user = get_product_by_product_id(product_id)
-        if not user:
+        product = get_product_by_product_id(product_id)
+        if not product:
             return jsonify({"error": {"exception": "ProductNotFound",
                            "message": "productId is invalid"}, "message": None}), 404
 
@@ -268,6 +268,82 @@ def handle_get_product_picture(product_id):
         else:
             return jsonify({"error": {"exception": "ProductNotFound",
                            "message": "No picture assigned to the product"}, 'message': None}), 404
+
+    except Exception as e:
+        # Log the error
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
+
+
+@products.route("/beverage/<product_id>", methods=['PUT'])
+@jwt_required()
+@roles_required("admin")
+def handle_update_beverage(product_id):
+    try:
+        # Parse JSON data
+        data = request.get_json()
+
+        # Extract data
+        product_name = data.get('productName')
+        category_id = data.get('categoryId')
+        beverage_size = data.get('beverageSize')
+        pricing = data.get('pricing')
+
+        # Check if required fields are present
+        if any(val is None for val in [product_name, category_id, beverage_size, pricing]):
+            return jsonify({"error": {"exception": "MissingValues",
+                                      "message": "Required values: productName, categoryId, beverageSize, pricing"},
+                            "message": None}), 400
+
+        product = get_product_by_product_id(product_id)
+        if not product:
+            return jsonify({"error": {"exception": "BeverageNotFound",
+                           "message": "productId is invalid"}, "message": None}), 404
+
+        # Ensure pricing is a dictionary
+        if not isinstance(pricing, dict):
+            return jsonify({"error": {"exception": "InvalidPricing",
+                                      "message": "Pricing must be an object containing 'normal', 'party', 'bigEvent'"},
+                            "message": None}), 400
+
+        # Required keys in pricing
+        required_pricing_keys = {"normal", "party", "bigEvent"}
+
+        # Check if pricing contains all required keys
+        if not required_pricing_keys.issubset(pricing.keys()):
+            return jsonify({"error": {"exception": "MissingPricingKeys",
+                                      "message": "Pricing must include 'normal', 'party', and 'bigEvent'"},
+                            "message": None}), 400
+
+        # Ensure pricing values are numbers
+        if not all(isinstance(pricing[key], (int, float)) for key in required_pricing_keys):
+            return jsonify({"error": {"exception": "InvalidPricingValues",
+                                      "message": "All pricing values must be numbers"},
+                            "message": None}), 400
+
+        # Update the product
+        response = update_beverage(product_id, product_name, category_id, beverage_size, pricing)
+        if response["error"]:
+            return jsonify(response), map_sqlstate_to_http_status(response["error"]["pgCode"])
+        else:
+            return jsonify(response), 200
+
+    except Exception as e:
+        # Log the error
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
+
+
+@products.route("/<product_id>", methods=['DELETE'])
+@jwt_required()
+@roles_required("admin")
+def handle_delete_product(product_id):
+    try:
+        if not product_id:
+            return jsonify({"error": {"exception": "ProductNotFound",
+                           "message": "Please provide an productId"}, "message": None}), 400
+
+        return delete_product_by_product_id(product_id)
 
     except Exception as e:
         # Log the error

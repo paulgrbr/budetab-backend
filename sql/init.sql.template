@@ -165,9 +165,12 @@ GRANT USAGE, SELECT ON SEQUENCE product_product_id_seq TO {db_auth_user};
 GRANT INSERT ON TABLE product TO {db_auth_user};
 GRANT SELECT ON TABLE product TO {db_auth_user};
 GRANT UPDATE ON TABLE product TO {db_auth_user};
+GRANT DELETE ON TABLE product TO {db_auth_user};
 
 GRANT INSERT ON TABLE beverage TO {db_auth_user};
 GRANT SELECT ON TABLE beverage TO {db_auth_user};
+GRANT UPDATE ON TABLE beverage TO {db_auth_user};
 
 GRANT INSERT ON TABLE pricing TO {db_auth_user};
 GRANT SELECT ON TABLE pricing TO {db_auth_user};
+GRANT UPDATE ON TABLE pricing TO {db_auth_user};

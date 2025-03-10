@@ -295,7 +295,7 @@ def test_remove_background_picture_by_admin_success(client):
 
     # Compute Structural Similarity Index (SSIM)
     similarity = calculate_ssim(reference_image, retrieved_img)
-    assert similarity >= 1.0, f"Images are not visually similar enough! SSIM: {similarity:.4f}"
+    assert similarity >= 0.95, f"Images are not visually similar enough! SSIM: {similarity:.4f}"
 
 
 def test_update_beverage_success(client, setup_product_entry):

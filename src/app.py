@@ -8,6 +8,7 @@ from endpoints.user import *
 from endpoints.product import *
 from endpoints.misc import *
 from endpoints.jwt_handlers import jwt
+from flask_cors import CORS
 
 app = Flask(__name__)
 Compress(app)
@@ -25,6 +26,17 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 60 * \
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 60 * \
     60 * 24 * 14  # 24 hours expiry for refresh tokens
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10MB (in bytes)
+
+# CORS Configuration
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:8100"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True  # Enable cookies or session-based auth
+    }
+})
+
 
 jwt.init_app(app)
 

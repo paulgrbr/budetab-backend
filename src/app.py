@@ -28,14 +28,7 @@ app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 60 * \
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10MB (in bytes)
 
 # CORS Configuration
-CORS(app, resources={
-    r"/*": {
-        "origins": ["http://localhost:8100" "capacitor://localhost", "http://localhost"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True  # Enable cookies or session-based auth
-    }
-})
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 jwt.init_app(app)

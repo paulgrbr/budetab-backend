@@ -52,7 +52,7 @@ def create_user(first_name: str, last_name: str, is_temporary: bool, price_ranki
         conn.commit()
         cur.close()
         conn.close()
-        return {"error": None, "message": {"uuid": user_uuid, "firstName": first_name, "lastName": last_name}}
+        return {"error": None, "message": {"userId": user_uuid, "firstName": first_name, "lastName": last_name}}
 
     except psycopg2.errors.UniqueViolation as Err:
         conn.rollback()

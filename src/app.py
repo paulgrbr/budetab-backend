@@ -21,10 +21,8 @@ RUN_ENV = os.environ.get('RUN_ENV', 'PROD')
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 app.config["JWT_SECRET_KEY"] = os.environ['JWT_SECRET_KEY']
 app.config['JWT_TOKEN_LOCATION'] = ['headers']
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 60 * \
-    30  # 1 hour expiry for access tokens
-app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 60 * \
-    60 * 24 * 14  # 24 hours expiry for refresh tokens
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 60 * 30  # 30 min expiry for access tokens
+app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 60 * 60 * 24 * 1  # (1) 365 days expiry for refresh tokens
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10MB (in bytes)
 
 # CORS Configuration

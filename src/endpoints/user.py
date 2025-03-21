@@ -242,9 +242,7 @@ def handle_get_my_profile_picture():
 
         # Check if picture exists
         if relative_db_path:
-            current_dir = Path(__file__).resolve().parent
-            project_root = current_dir.parent.parent
-            file_path = project_root / relative_db_path
+            file_path = os.path.abspath(relative_db_path)
 
             if not os.path.exists(file_path):
                 return jsonify({"error": {"exception": "FileNotFound",
@@ -270,9 +268,7 @@ def handle_get_user_profile_picture(user_id):
 
         # Check if picture exists
         if relative_db_path:
-            current_dir = Path(__file__).resolve().parent
-            project_root = current_dir.parent.parent
-            file_path = project_root / relative_db_path
+            file_path = os.path.abspath(relative_db_path)
 
             if not os.path.exists(file_path):
                 return jsonify({"error": {"exception": "FileNotFound",

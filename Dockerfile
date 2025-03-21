@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Kopiere den Rest der App
 COPY src/ .
 
+# Copy the entire 'data' folder
+COPY data/ data
+
 # Exponiere den Flask-Port
 EXPOSE 8085
 

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import profile
 from PIL import Image
 from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -29,7 +30,8 @@ def handle_get_my_user():
                                                        "lastName": user.last_name,
                                                        "isTemporary": user.is_temporary,
                                                        "priceRanking": user.price_ranking,
-                                                       "permissions": user.permissions
+                                                       "permissions": user.permissions,
+                                                       "hasProfilePicture": user.has_profile_picture
                                                        }}), 200
         else:
             return jsonify({"error": {"exception": "UserNotFound",
@@ -98,7 +100,8 @@ def handle_get_all_users():
                          "lastName": user.last_name,
                          "isTemporary": user.is_temporary,
                          "priceRanking": user.price_ranking,
-                         "permissions": user.permissions
+                         "permissions": user.permissions,
+                         "hasProfilePicture": user.has_profile_picture
                          } for user in users]
         }), 200
 
@@ -299,7 +302,8 @@ def handle_get_specific_user(user_id):
                                                        "lastName": user.last_name,
                                                        "isTemporary": user.is_temporary,
                                                        "priceRanking": user.price_ranking,
-                                                       "permissions": user.permissions
+                                                       "permissions": user.permissions,
+                                                       "hasProfilePicture": user.has_profile_picture
                                                        }}), 200
         else:
             return jsonify({"error": {"exception": "UserNotFound",

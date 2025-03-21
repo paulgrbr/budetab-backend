@@ -13,7 +13,7 @@ def get_user_by_linked_account_uuid(account_public_id: uuid):
     conn = get_auth_db_connection()
     cur = conn.cursor()
     cur.execute('''
-                SELECT u.user_id, u.first_name, u.last_name, u.time_created, u.is_temporary, u.price_ranking, u.permissions
+                SELECT u.user_id, u.first_name, u.last_name, u.time_created, u.is_temporary, u.price_ranking, u.permissions, u.profile_picture_path
                 FROM account a
                 JOIN "user" u ON(a.linked_user_id = u.user_id)
                 WHERE a.public_id = %s
@@ -24,7 +24,7 @@ def get_user_by_linked_account_uuid(account_public_id: uuid):
     conn.close()
     if response:
         return User(response[0], response[1], response[2], response[3],
-                    response[4], response[5], response[6])
+                    response[4], response[5], response[6], response[7])
     else:
         return None
 
@@ -71,7 +71,7 @@ def get_all_users():
     conn = get_auth_db_connection()
     cur = conn.cursor()
     cur.execute('''
-                SELECT u.user_id, u.first_name, u.last_name, u.time_created, u.is_temporary, u.price_ranking, u.permissions
+                SELECT u.user_id, u.first_name, u.last_name, u.time_created, u.is_temporary, u.price_ranking, u.permissions, u.profile_picture_path
                 FROM "user" u
                 '''
                 )
@@ -82,7 +82,7 @@ def get_all_users():
     parsed_response = []
     for row in response:
         parsed_response.append(User(row[0], row[1], row[2], row[3],
-                                    row[4], row[5], row[6]))
+                                    row[4], row[5], row[6], row[7]))
     return parsed_response
 
 
@@ -163,7 +163,7 @@ def get_user_by_user_id(user_id: uuid):
     conn = get_auth_db_connection()
     cur = conn.cursor()
     cur.execute('''
-                SELECT u.user_id, u.first_name, u.last_name, u.time_created, u.is_temporary, u.price_ranking, u.permissions
+                SELECT u.user_id, u.first_name, u.last_name, u.time_created, u.is_temporary, u.price_ranking, u.permissions, u.profile_picture_path
                 FROM "user" u
                 WHERE u.user_id = %s
                 ''',
@@ -173,7 +173,7 @@ def get_user_by_user_id(user_id: uuid):
     conn.close()
     if response:
         return User(response[0], response[1], response[2], response[3],
-                    response[4], response[5], response[6])
+                    response[4], response[5], response[6], response[7])
     else:
         return None
 

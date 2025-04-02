@@ -5,30 +5,39 @@ from flask_compress import Compress
 from flask_jwt_extended import verify_jwt_in_request
 from endpoints.account import *
 from endpoints.user import *
+from endpoints.product import *
+from endpoints.misc import *
 from endpoints.jwt_handlers import jwt
+from flask_cors import CORS
 
 app = Flask(__name__)
 Compress(app)
 
 # Environment check for production
 RUN_ENV = os.environ.get('RUN_ENV', 'PROD')
-# Loging!!
+# Logging!!
 
 # Configuration
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 app.config["JWT_SECRET_KEY"] = os.environ['JWT_SECRET_KEY']
 app.config['JWT_TOKEN_LOCATION'] = ['headers']
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 60 * \
-    30  # 1 hour expiry for access tokens
-app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 60 * \
-    60 * 24 * 14  # 24 hours expiry for refresh tokens
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 60 * 30  # 30 min expiry for access tokens
+app.config["JWT_REFRESH_TOKEN_EXPIRES"] = 60 * 60 * 24 * 1  # (1) 365 days expiry for refresh tokens
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10MB (in bytes)
+
+# CORS Configuration
+CORS(app, resources={r"/*": {"origins": "*"}})
+
 
 jwt.init_app(app)
 
 # Account endpoint
 app.register_blueprint(accounts, url_prefix='/account')
 app.register_blueprint(users, url_prefix='/user')
+app.register_blueprint(products, url_prefix='/product')
+
+app.register_blueprint(misc, url_prefix='/misc')
+
 
 if __name__ == "__main__":
     env_vars = [

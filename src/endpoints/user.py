@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import profile
 from PIL import Image
 from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -29,7 +30,8 @@ def handle_get_my_user():
                                                        "lastName": user.last_name,
                                                        "isTemporary": user.is_temporary,
                                                        "priceRanking": user.price_ranking,
-                                                       "permissions": user.permissions
+                                                       "permissions": user.permissions,
+                                                       "hasProfilePicture": user.has_profile_picture
                                                        }}), 200
         else:
             return jsonify({"error": {"exception": "UserNotFound",
@@ -98,7 +100,8 @@ def handle_get_all_users():
                          "lastName": user.last_name,
                          "isTemporary": user.is_temporary,
                          "priceRanking": user.price_ranking,
-                         "permissions": user.permissions
+                         "permissions": user.permissions,
+                         "hasProfilePicture": user.has_profile_picture
                          } for user in users]
         }), 200
 
@@ -242,9 +245,7 @@ def handle_get_my_profile_picture():
 
         # Check if picture exists
         if relative_db_path:
-            current_dir = Path(__file__).resolve().parent
-            project_root = current_dir.parent.parent
-            file_path = project_root / relative_db_path
+            file_path = os.path.abspath(relative_db_path)
 
             if not os.path.exists(file_path):
                 return jsonify({"error": {"exception": "FileNotFound",
@@ -270,9 +271,7 @@ def handle_get_user_profile_picture(user_id):
 
         # Check if picture exists
         if relative_db_path:
-            current_dir = Path(__file__).resolve().parent
-            project_root = current_dir.parent.parent
-            file_path = project_root / relative_db_path
+            file_path = os.path.abspath(relative_db_path)
 
             if not os.path.exists(file_path):
                 return jsonify({"error": {"exception": "FileNotFound",
@@ -303,7 +302,8 @@ def handle_get_specific_user(user_id):
                                                        "lastName": user.last_name,
                                                        "isTemporary": user.is_temporary,
                                                        "priceRanking": user.price_ranking,
-                                                       "permissions": user.permissions
+                                                       "permissions": user.permissions,
+                                                       "hasProfilePicture": user.has_profile_picture
                                                        }}), 200
         else:
             return jsonify({"error": {"exception": "UserNotFound",

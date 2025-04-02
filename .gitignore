@@ -28,6 +28,7 @@ MANIFEST
 init.sql
 admin_setup.sql
 data/images/profile_pictures/*
+data/images/product_pictures/*
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

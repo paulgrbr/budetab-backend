@@ -4,7 +4,7 @@ import bcrypt
 import uuid
 import bcrypt
 import psycopg2
-from models.Account import Account
+from models.Account import Account, AccountSession
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), './')))
 
@@ -172,3 +172,163 @@ def update_account_password(user_id: uuid, password: str):
         conn.close()
         return {"error": {"exception": Err.__class__.__name__, "message": str(
             Err.diag.message_primary), "pgCode": Err.pgcode}, "message": None}
+
+
+def create_account_session(token_id: uuid, origin_id: uuid, account_id: uuid,
+                           ip_address: str, device: str, browser: str):
+    try:
+        conn = get_public_db_connection()
+        cur = conn.cursor()
+
+        cur.execute('''
+                    INSERT INTO account_sessions(token_id, origin_id, account_id, ip_address, device, browser)
+                    VALUES(%s, %s, %s, %s, %s, %s)
+                    ''',
+                    (
+                        token_id,
+                        origin_id,
+                        account_id,
+                        ip_address,
+                        device,
+                        browser
+                    ))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return
+
+    except psycopg2.Error as Err:
+        conn.rollback()
+        conn.close()
+        raise Err
+
+
+def check_token_id_is_active(account_id: uuid, token_id: uuid):
+    try:
+        conn = get_public_db_connection()
+        cur = conn.cursor()
+
+        cur.execute('''
+                    SELECT token_id
+                    FROM account_sessions
+                    WHERE token_id = %s
+                    AND account_id = %s
+                    AND invalidated = false
+                    ''',
+                    (
+                        token_id,
+                        account_id
+                    ))
+        response = cur.fetchall()
+        cur.close()
+        conn.close()
+        if not response:
+            return False
+        else:
+            return True
+
+    except psycopg2.Error as Err:
+        conn.rollback()
+        conn.close()
+        raise Err
+
+
+def invalidate_token_by_token_id(account_id: uuid, token_id: uuid):
+    try:
+        conn = get_public_db_connection()
+        cur = conn.cursor()
+
+        cur.execute('''
+                    UPDATE account_sessions
+                    SET invalidated = true,
+                        time_invalidated = NOW()
+                    WHERE token_id = %s
+                    AND account_id = %s
+                    AND invalidated = false
+                    ''',
+                    (
+                        token_id,
+                        account_id
+                    ))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return
+
+    except psycopg2.Error as Err:
+        conn.rollback()
+        conn.close()
+        raise Err
+
+
+def invalidate_tokens_by_origin_id(account_id: uuid, origin_id: uuid):
+    try:
+        conn = get_public_db_connection()
+        cur = conn.cursor()
+
+        cur.execute('''
+                    UPDATE account_sessions
+                    SET invalidated = true,
+                        time_invalidated = NOW()
+                    WHERE origin_id = %s
+                    AND account_id = %s
+                    AND invalidated = false
+                    ''',
+                    (
+                        origin_id,
+                        account_id
+                    ))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return
+
+    except psycopg2.Error as Err:
+        conn.rollback()
+        conn.close()
+        raise Err
+
+
+def invalidate_tokens_by_account_id(account_id: uuid):
+    try:
+        conn = get_public_db_connection()
+        cur = conn.cursor()
+
+        cur.execute('''
+                    UPDATE account_sessions
+                    SET invalidated = true,
+                        time_invalidated = NOW()
+                    WHERE account_id = %s
+                    AND invalidated = false
+                    ''',
+                    (
+                        account_id,
+                    ))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return
+
+    except psycopg2.Error as Err:
+        conn.rollback()
+        conn.close()
+        raise Err
+
+
+def get_all_account_sessions():
+    conn = get_auth_db_connection()
+    cur = conn.cursor()
+
+    cur.execute('''
+                SELECT token_id, account_id, ip_address, device, browser, origin_id, time_created
+                FROM account_sessions
+                WHERE invalidated = false
+                ''')
+    response = cur.fetchall()
+    parsed_response = []
+    for row in response:
+        parsed_response.append(AccountSession(row[0], row[1], row[2], row[3], row[4], row[5], row[6]))
+    cur.close()
+    conn.close()
+
+    return parsed_response

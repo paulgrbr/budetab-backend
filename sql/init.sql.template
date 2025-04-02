@@ -49,6 +49,7 @@ CREATE TABLE product_category(
 CREATE TABLE product(
     product_id SERIAL PRIMARY KEY,
     product_picture_path TEXT,
+    product_name VARCHAR(255) NOT NULL, 
     category_id INT REFERENCES product_category(category_id)
                     ON DELETE SET NULL
                     ON UPDATE CASCADE,
@@ -131,6 +132,47 @@ CREATE TABLE register_transactions(
         ) 
 );
 
+CREATE TABLE account_sessions(
+    token_id UUID NOT NULL PRIMARY KEY,
+    account_id UUID NOT NULL REFERENCES account(public_id)
+                            ON DELETE CASCADE
+                            ON UPDATE CASCADE,
+    ip_address VARCHAR(255) NOT NULL,
+    device VARCHAR(255) NOT NULL,
+    browser VARCHAR(255) NOT NULL,
+    time_created TIMESTAMPTZ DEFAULT NOW(),
+    origin_id UUID NOT NULL,
+    invalidated BOOLEAN NOT NULL DEFAULT FALSE,
+    time_invalidated TIMESTAMPTZ DEFAULT NULL
+);
+-- Invalidation date
+CREATE OR REPLACE FUNCTION set_time_invalidated()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.invalidated = TRUE AND OLD.invalidated = FALSE THEN
+    NEW.time_invalidated := NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+--- Also
+CREATE TRIGGER trg_set_time_invalidated
+BEFORE UPDATE ON account_sessions
+FOR EACH ROW
+WHEN (OLD.invalidated IS DISTINCT FROM NEW.invalidated)
+EXECUTE FUNCTION set_time_invalidated();
+
+CREATE OR REPLACE VIEW active_account_sessions AS
+SELECT
+  a.username,
+  s.ip_address,
+  s.device,
+  s.browser,
+  s.time_created
+FROM account_sessions s
+JOIN account a ON a.public_id = s.account_id
+WHERE s.invalidated = false;
+
 -- User public
 CREATE USER {db_public_user} WITH PASSWORD '{db_public_user_pw}';
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
@@ -140,6 +182,10 @@ GRANT USAGE ON SCHEMA public TO {db_public_user};
 
 GRANT INSERT ON TABLE account TO {db_public_user};
 GRANT SELECT ON TABLE account TO {db_public_user};
+
+GRANT INSERT ON TABLE account_sessions TO {db_public_user};
+GRANT UPDATE ON TABLE account_sessions TO {db_public_user};
+GRANT SELECT ON TABLE account_sessions TO {db_public_user};
 
 -- User authed
 CREATE USER {db_auth_user} WITH PASSWORD '{db_auth_user_pw}';
@@ -155,3 +201,23 @@ GRANT INSERT ON TABLE "user" TO {db_auth_user};
 GRANT SELECT ON TABLE "user" TO {db_auth_user};
 GRANT UPDATE ON TABLE "user" TO {db_auth_user};
 GRANT DELETE ON TABLE "user" TO {db_auth_user};
+
+GRANT USAGE, SELECT ON SEQUENCE product_category_category_id_seq TO {db_auth_user};
+GRANT INSERT ON TABLE product_category TO {db_auth_user};
+GRANT SELECT ON TABLE product_category TO {db_auth_user};
+
+GRANT USAGE, SELECT ON SEQUENCE product_product_id_seq TO {db_auth_user};
+GRANT INSERT ON TABLE product TO {db_auth_user};
+GRANT SELECT ON TABLE product TO {db_auth_user};
+GRANT UPDATE ON TABLE product TO {db_auth_user};
+GRANT DELETE ON TABLE product TO {db_auth_user};
+
+GRANT INSERT ON TABLE beverage TO {db_auth_user};
+GRANT SELECT ON TABLE beverage TO {db_auth_user};
+GRANT UPDATE ON TABLE beverage TO {db_auth_user};
+
+GRANT INSERT ON TABLE pricing TO {db_auth_user};
+GRANT SELECT ON TABLE pricing TO {db_auth_user};
+GRANT UPDATE ON TABLE pricing TO {db_auth_user};
+
+GRANT SELECT ON TABLE account_sessions TO {db_auth_user};

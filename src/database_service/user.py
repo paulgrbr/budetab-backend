@@ -213,7 +213,7 @@ def update_user(user_id: uuid, first_name: str, last_name: str,
         conn.commit()
         cur.close()
         conn.close()
-        return {"error": None, "message": {"uuid": user_id, "status": "User updated successfully"}}
+        return {"error": None, "message": {"userId": user_id, "status": "User updated successfully"}}
 
     except psycopg2.Error as Err:
         conn.rollback()  # Rollback in case of error

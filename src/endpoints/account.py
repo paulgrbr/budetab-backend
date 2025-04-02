@@ -1,7 +1,12 @@
+from ipaddress import ip_address
+from tabnanny import check
+import token
+import uuid
 import bcrypt
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
-from database_service.account import create_account, get_all_accounts, get_pg_version, get_all_accounts_by_username, get_account_by_uuid, update_account_password, update_link_user_to_account
+from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt, jwt_required, get_jwt_identity
+import user_agents
+from database_service.account import check_token_id_is_active, create_account, create_account_session, get_all_account_sessions, get_all_accounts, get_pg_version, get_all_accounts_by_username, get_account_by_uuid, invalidate_tokens_by_account_id, invalidate_tokens_by_origin_id, update_account_password, update_link_user_to_account
 from database_service.sqlstate import map_sqlstate_to_http_status
 import re
 from database_service.user import get_user_by_linked_account_uuid
@@ -63,6 +68,13 @@ def handle_login():
         # Parse JSON data
         data = request.get_json()
 
+        # Reuest metadata for sessions
+        ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+        ua_string = request.headers.get("User-Agent", "")
+        ua = user_agents.parse(ua_string)
+        device = f"{ua.device.family}"
+        browser = f"{ua.browser.family} {ua.browser.version_string}"
+
         # Extract and validate username and password
         username = data.get('username').strip().lower()
         password = data.get('password')
@@ -77,21 +89,67 @@ def handle_login():
             account = None
 
         if account and bcrypt.checkpw(password.encode("utf-8"), account.password_hash):
+            origin_id = data.get('originId')
+            if origin_id:
+                # Invalidate all other tokens for this users origin (browser, app, etc.)
+                invalidate_tokens_by_origin_id(account.public_id, origin_id)
+            else:
+                # On first startup issue a new originId
+                origin_id = str(uuid.uuid4())
+
+            token_id = str(uuid.uuid4())
+
+            response = create_account_session(token_id, origin_id, account.public_id, ip_address, device, browser)
+
             # Get user permissions if assigned
             user = get_user_by_linked_account_uuid(account.public_id)
             if user:
-                additional_claims = {"permissions": user.permissions}
+                additional_claims = {
+                    "permissions": user.permissions
+                }
             else:
-                additional_claims = {"permissions": "none"}
+                additional_claims = {
+                    "permissions": "none"
+                }
 
             access_token = create_access_token(
                 identity=account.public_id, fresh=True, additional_claims=additional_claims)
-            refresh_token = create_refresh_token(identity=account.public_id)
+            refresh_token = create_refresh_token(identity=account.public_id, additional_claims={
+                "tokenId": token_id,
+                "originId": origin_id
+            })
 
             return jsonify({"error": None, 'message': 'Login Success',
-                           'access_token': access_token, 'refresh_token': refresh_token}), 200
+                           'access_token': access_token, 'refresh_token': refresh_token, 'origin_id': origin_id}), 200
         else:
             return jsonify({"error": None, 'message': 'Login Failed'}), 401
+
+    except Exception as e:
+        # Log the error
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
+
+
+# Account logout route
+@accounts.route("/logout", methods=['POST'])
+@jwt_required()
+def handle_logout():
+    try:
+        # Parse JSON data
+        data = request.get_json()
+
+        # Extract the user ID from the JWT
+        user_id = get_jwt_identity()
+
+        origin_id = data.get('originId')
+        if not origin_id:
+            return jsonify({"error": {"exception": "MissingValues",
+                           "message": "Missing originId"}, "message": None}), 400
+
+        # Invalidate all other tokens for this users origin (browser, app, etc.)
+        invalidate_tokens_by_origin_id(user_id, origin_id)
+
+        return jsonify({"error": None, 'message': 'Logout Success'}), 200
 
     except Exception as e:
         # Log the error
@@ -107,7 +165,7 @@ def handle_refresh_token():
         # Extract the user ID from the JWT
         user_id = get_jwt_identity()
         account = get_account_by_uuid(user_id)
-
+        token_id = get_jwt()["tokenId"]
         # Get user permissions if assigned
         user = get_user_by_linked_account_uuid(user_id)
         if user:
@@ -115,11 +173,20 @@ def handle_refresh_token():
         else:
             additional_claims = {"permissions": "none"}
 
-        # Check if user exists
-        access_token = create_access_token(
-            identity=account.public_id, fresh=False, additional_claims=additional_claims)
-        return jsonify({"error": None, 'message': 'Refresh Success', 'access_token': access_token}), 200
-
+        isValid = check_token_id_is_active(user_id, token_id)
+        if isValid:
+            # Check if user exists
+            access_token = create_access_token(
+                identity=account.public_id, fresh=False, additional_claims=additional_claims)
+            return jsonify({"error": None, 'message': 'Refresh Success', 'access_token': access_token}), 200
+        else:
+            return jsonify({
+                "error": {
+                    "exception": "TokenExpired",
+                    "message": "Your session was invalidated. Please log in again."
+                },
+                "message": None
+            }), 401
     except Exception as e:
         # Log the error
         print(f"Unexpected error: {e}")
@@ -249,6 +316,88 @@ def handle_change_password_by_admin(public_id):
             return jsonify(response), map_sqlstate_to_http_status(response["error"]["pgCode"])
         else:
             return jsonify(response), 200
+
+    except Exception as e:
+        # Log the error
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
+
+
+# Logout sessions by admin
+@accounts.route("/session/terminate", methods=['POST'])
+@jwt_required()
+@roles_required("admin")
+def handle_terminate_session_by_admin():
+    try:
+        # Parse JSON data
+        data = request.get_json()
+
+        account_id = data.get('accountId')
+        origin_id = data.get('originId')
+        if not origin_id or not account_id:
+            return jsonify({"error": {"exception": "MissingValues",
+                           "message": "Missing originId, accountId"}, "message": None}), 400
+
+        # Invalidate all other tokens for this users origin (browser, app, etc.)
+        invalidate_tokens_by_origin_id(account_id, origin_id)
+
+        return jsonify({"error": None, 'message': 'Logout Success'}), 200
+
+    except Exception as e:
+        # Log the error
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
+
+
+# Logout sessions by admin
+@accounts.route("/session/terminate/<public_id>", methods=['GET'])
+@jwt_required()
+@roles_required("admin")
+def handle_terminate_all_account_sessions_by_admin(public_id):
+    try:
+        # Invalidate all other tokens for this user (all browser, app, etc.)
+        invalidate_tokens_by_account_id(public_id)
+
+        return jsonify({"error": None, 'message': 'Logout Success'}), 200
+
+    except Exception as e:
+        # Log the error
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
+
+
+# Get all Account sessions
+@accounts.route("/session", methods=['GET'])
+@jwt_required()
+@roles_required("admin")
+def handle_get_all_account_sessions():
+    try:
+        sessions = get_all_account_sessions()
+
+        # Check if user list is empty
+        if not sessions:  # Check if list is empty
+            return jsonify({"error": None, "message": {}}), 200
+
+        # Group sessions by accountId
+        grouped_sessions = {}
+        for session in sessions:
+            account_id = session.account_id
+            if account_id not in grouped_sessions:
+                grouped_sessions[account_id] = []
+            grouped_sessions[account_id].append({
+                'tokenId': session.token_id,
+                'ipAddress': session.ip_address,
+                'device': session.device,
+                'browser': session.browser,
+                'originId': session.origin_id,
+                'timeCreated': session.time_created
+            })
+
+        # Convert grouped sessions to JSON format
+        return jsonify({
+            "error": None,
+            "message": grouped_sessions
+        }), 200
 
     except Exception as e:
         # Log the error

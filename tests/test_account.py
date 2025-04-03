@@ -624,37 +624,37 @@ def test_notify_user_success(client, setup_account_entry, setup_user_entry):
     assert response.status_code == 200, f"Expected status code 200, but got {
         response.status_code}"
 
-    # response = fcm_notify_specific_user(
-    #     "95cebd35-2489-4dbf-b379-a1f901875831",
-    #     "Alles bereit!",
-    #     "Test 1 hat funktioniert",
-    #     sound=True,
-    #     route="/history",
-    # )
-    # assert response == 200, "Expected Response Code 200"
+    response = fcm_notify_specific_user(
+        "95cebd35-2489-4dbf-b379-a1f901875831",
+        "Alles bereit!",
+        "Test 1 hat funktioniert",
+        sound=True,
+        route="/history",
+    )
+    assert response == 200, "Expected Response Code 200"
 
-    # response = fcm_notify_specific_account(
-    #     "d0192fdf-56ee-4aab-81e2-36667414c0b1",
-    #     "Alles bereit!",
-    #     "Test 2 hat funktioniert",
-    #     sound=True,
-    #     route="/history",
-    # )
-    # assert response == 200, "Expected Response Code 200"
+    response = fcm_notify_specific_account(
+        "d0192fdf-56ee-4aab-81e2-36667414c0b1",
+        "Alles bereit!",
+        "Test 2 hat funktioniert",
+        sound=True,
+        route="/history",
+    )
+    assert response == 200, "Expected Response Code 200"
 
-    # # User is not admin and therefore no notification is sent
-    # response = fcm_notify_all_admins(
-    #     "Alles bereit!",
-    #     "Test 3 hat funktioniert",
-    #     sound=True,
-    #     route="/history",
-    # )
-    # assert response == 200, "Expected Response Code 200"
+    # User is not admin and therefore no notification is sent
+    response = fcm_notify_all_admins(
+        "Alles bereit!",
+        "Test 3 hat funktioniert",
+        sound=True,
+        route="/history",
+    )
+    assert response == 200, "Expected Response Code 200"
 
-    # response = fcm_notify_all_users(
-    #     "Alles bereit!",
-    #     "Test 4 hat funktioniert",
-    #     sound=True,
-    #     route="/history",
-    # )
-    # assert response == 200, "Expected Response Code 200"
+    response = fcm_notify_all_users(
+        "Alles bereit!",
+        "Test 4 hat funktioniert",
+        sound=True,
+        route="/history",
+    )
+    assert response == 200, "Expected Response Code 200"

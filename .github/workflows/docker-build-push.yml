@@ -38,6 +38,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install --no-binary psycopg2 -r requirements.txt
 
+      - name: Decode Firebase Service Account
+        run: |
+          echo "${{ secrets.FIREBASE_CREDENTIALS_B64 }}" | base64 -d > data/fcm/firebase-credentials.json
+
       - name: Run Tests
         run: pytest -s
 

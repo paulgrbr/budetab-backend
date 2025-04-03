@@ -7,9 +7,10 @@ import requests
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request as GoogleAuthRequest
 
+
 # Lade Firebase Service Account
 SCOPES = ['https://www.googleapis.com/auth/firebase.messaging']
-SERVICE_ACCOUNT_FILE = os.path.abspath('data/fcm/budetab-app-firebase-adminsdk-fbsvc-b6b41586bc.json')
+SERVICE_ACCOUNT_FILE = os.path.abspath('data/fcm/firebase-credentials.json')
 PROJECT_ID = 'budetab-app'
 
 credentials = service_account.Credentials.from_service_account_file(

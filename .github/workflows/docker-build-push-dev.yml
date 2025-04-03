@@ -43,6 +43,7 @@ jobs:
 
       - name: Decode Firebase Service Account
         run: |
+          mkdir -p data/fcm
           echo "${{ secrets.FIREBASE_CREDENTIALS_B64 }}" | base64 -d > data/fcm/firebase-credentials.json
 
       - name: Run Tests

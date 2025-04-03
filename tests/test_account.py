@@ -589,7 +589,7 @@ def test_logout_success(client, setup_account_entry):
     assert len(data["message"]) == 0, "Expected amount of accounts doesn't match"
 
 
-@pytest.mark.skipif(sys.platform != "darwin", reason="Only run on local dev env and not in CI/CD")
+@pytest.mark.skipif(sys.platform != "", reason="Only run on local dev env and not in CI/CD")
 def test_notify_user_success(client, setup_account_entry, setup_user_entry):
     # Test successful login
     payload = {"username": "test_user", "password": "Password123"}

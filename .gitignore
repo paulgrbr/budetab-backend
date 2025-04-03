@@ -173,3 +173,4 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+data/fcm/budetab-app-firebase-adminsdk-fbsvc-b6b41586bc.json

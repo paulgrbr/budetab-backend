@@ -1,9 +1,14 @@
-import json
-from test_setup import get_mock_JWT_access_token, get_mock_JWT_refresh_token
-import os
-import sys
-import pytest
 from test_setup import setup, setup_schema, setup_account_entry, setup_user_entry
+import pytest
+import sys
+import os
+from test_setup import get_mock_JWT_access_token, get_mock_JWT_refresh_token
+from endpoints.fcm_service import fcm_notify_all_admins, fcm_notify_all_users, fcm_notify_specific_account, fcm_notify_specific_user
+import json
+from urllib import response
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+
 
 # Add to the Python path
 sys.path.append(os.path.abspath(
@@ -582,3 +587,75 @@ def test_logout_success(client, setup_account_entry):
 
     # Ensure right amount of accounts are listed
     assert len(data["message"]) == 0, "Expected amount of accounts doesn't match"
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="Only run on local dev env and not in CI/CD")
+def test_notify_user_success(client, setup_account_entry, setup_user_entry):
+    # Test successful login
+    payload = {"username": "test_user", "password": "Password123"}
+    response = client.post('/account/login', json=payload)
+
+    # Assert the response status code is 200 Ok
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"
+
+    # Extract the JSON response
+    response_data = response.get_json()
+
+    # Assert the response structure and content
+    assert response_data["error"] is None, f"Expected 'error' to be None, but got {
+        response_data['error']}"
+
+    # Assert that "access_token" & "refresh_token" exists in the JSON
+    assert "access_token" in response_data, "Access token is missing!"
+    assert "refresh_token" in response_data, "Refresh token is missing!"
+
+    # non-empty
+    assert response_data["access_token"], "Access token is empty!"
+    assert response_data["refresh_token"], "Refresh token is empty!"
+
+    payload = {"notificationToken": "fsOWWlojrkaarH6tQrUYZe:APA91bEWYNWlRwdio2200jEP6M5Gl9OYRIyBCw_IIwQ4PaTUhDhvdhWaJPhy6HHJS1tjJYt-6AbkVc2F-Pif5-JbLY0VzS8fKOJXfcVBgXt9Jn5GFhQP57U",
+               "originId": response_data["origin_id"]}
+
+    # Use access token to POST /account/notification
+    headers = {"Authorization": f"Bearer {response_data["access_token"]}"}
+    response = client.post('/account/notification', headers=headers, json=payload)
+
+    # Assert the response status code is 200 Ok
+    assert response.status_code == 200, f"Expected status code 200, but got {
+        response.status_code}"
+
+    response = fcm_notify_specific_user(
+        "95cebd35-2489-4dbf-b379-a1f901875831",
+        "Alles bereit!",
+        "Test 1 hat funktioniert",
+        sound=True,
+        route="/history",
+    )
+    assert response == 200, "Expected Response Code 200"
+
+    response = fcm_notify_specific_account(
+        "d0192fdf-56ee-4aab-81e2-36667414c0b1",
+        "Alles bereit!",
+        "Test 2 hat funktioniert",
+        sound=True,
+        route="/history",
+    )
+    assert response == 200, "Expected Response Code 200"
+
+    # User is not admin and therefore no notification is sent
+    response = fcm_notify_all_admins(
+        "Alles bereit!",
+        "Test 3 hat funktioniert",
+        sound=True,
+        route="/history",
+    )
+    assert response == 200, "Expected Response Code 200"
+
+    response = fcm_notify_all_users(
+        "Alles bereit!",
+        "Test 4 hat funktioniert",
+        sound=True,
+        route="/history",
+    )
+    assert response == 200, "Expected Response Code 200"

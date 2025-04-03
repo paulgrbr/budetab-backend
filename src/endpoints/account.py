@@ -6,10 +6,11 @@ import bcrypt
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt, jwt_required, get_jwt_identity
 import user_agents
-from database_service.account import check_token_id_is_active, create_account, create_account_session, get_all_account_sessions, get_all_accounts, get_pg_version, get_all_accounts_by_username, get_account_by_uuid, invalidate_tokens_by_account_id, invalidate_tokens_by_origin_id, update_account_password, update_link_user_to_account
+from database_service.account import check_token_id_is_active, cleanup_expired_sessions, create_account, create_account_session, get_all_account_sessions, get_all_accounts, get_pg_version, get_all_accounts_by_username, get_account_by_uuid, invalidate_tokens_by_account_id, invalidate_tokens_by_origin_id, update_account_password, update_account_session_notification_token, update_link_user_to_account
 from database_service.sqlstate import map_sqlstate_to_http_status
 import re
 from database_service.user import get_user_by_linked_account_uuid
+from endpoints.fcm_service import fcm_notify_all_admins
 from endpoints.jwt_handlers import roles_required
 from models.Account import Account
 
@@ -47,6 +48,12 @@ def handle_register():
         if response["error"]:
             return jsonify(response), map_sqlstate_to_http_status(response["error"]["pgCode"])
         else:
+            fcm_notify_all_admins(
+                "Neue Registrierung",
+                f"👤 '{username}' hat sich gerade registriert. Bitte verknüpfe den Account.",
+                sound=True,
+                route="/admin/all-accounts",
+            )
             return jsonify(response), 201
 
     except Exception as e:
@@ -148,6 +155,9 @@ def handle_logout():
 
         # Invalidate all other tokens for this users origin (browser, app, etc.)
         invalidate_tokens_by_origin_id(user_id, origin_id)
+
+        # Clean all tokens that are invalidated 10 days before or are expired
+        cleanup_expired_sessions()
 
         return jsonify({"error": None, 'message': 'Logout Success'}), 200
 
@@ -397,6 +407,35 @@ def handle_get_all_account_sessions():
         return jsonify({
             "error": None,
             "message": grouped_sessions
+        }), 200
+
+    except Exception as e:
+        # Log the error
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
+
+
+# Link the FCM token to the account
+@accounts.route("/notification", methods=['POST'])
+@jwt_required()
+def handle_link_notification_token_to_session():
+    try:
+        # Extract the user ID from the JWT
+        user_id = get_jwt_identity()
+        # Parse JSON data
+        data = request.get_json()
+
+        notification_token = data.get('notificationToken')
+        origin_id = data.get('originId')
+        if not notification_token or not origin_id:
+            return jsonify({"error": {"exception": "MissingValues",
+                           "message": "Missing notificationToken and originId"}, "message": None}), 400
+
+        # Update the session
+        response = update_account_session_notification_token(user_id, origin_id, notification_token)
+        return jsonify({
+            "error": None,
+            'message': 'Notification token linked successfully'
         }), 200
 
     except Exception as e:

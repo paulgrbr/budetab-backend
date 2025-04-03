@@ -19,3 +19,4 @@ flask-cors==5.0.1
 PyYAML==6.0.2
 user-agents==2.2.0
 ua-parser==1.0.1
+google-auth==2.38.0

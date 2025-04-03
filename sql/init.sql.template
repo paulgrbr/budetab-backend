@@ -142,6 +142,7 @@ CREATE TABLE account_sessions(
     browser VARCHAR(255) NOT NULL,
     time_created TIMESTAMPTZ DEFAULT NOW(),
     origin_id UUID NOT NULL,
+    push_notification_key VARCHAR(255) DEFAULT NULL,
     invalidated BOOLEAN NOT NULL DEFAULT FALSE,
     time_invalidated TIMESTAMPTZ DEFAULT NULL
 );
@@ -221,3 +222,4 @@ GRANT SELECT ON TABLE pricing TO {db_auth_user};
 GRANT UPDATE ON TABLE pricing TO {db_auth_user};
 
 GRANT SELECT ON TABLE account_sessions TO {db_auth_user};
+GRANT DELETE ON TABLE account_sessions TO {db_auth_user};

@@ -332,3 +332,151 @@ def get_all_account_sessions():
     conn.close()
 
     return parsed_response
+
+
+def cleanup_expired_sessions():
+    try:
+        conn = get_auth_db_connection()
+        cur = conn.cursor()
+
+        cur.execute('''
+                    DELETE FROM account_sessions
+                    WHERE (
+                        invalidated = true
+                        AND time_invalidated < NOW() - INTERVAL '10 days'
+                    )
+                    OR time_created < NOW() - INTERVAL '365 days';
+                    ''')
+        conn.commit()
+        cur.close()
+        conn.close()
+        return
+
+    except psycopg2.Error as Err:
+        conn.rollback()
+        conn.close()
+        raise Err
+
+
+def update_account_session_notification_token(account_id: uuid, origin_id: uuid, notification_token: str):
+    try:
+        conn = get_public_db_connection()
+        cur = conn.cursor()
+
+        cur.execute('''
+                    UPDATE account_sessions
+                    SET push_notification_key = %s
+                    WHERE account_id = %s
+                    AND origin_id = %s
+                    AND invalidated = false
+                    ''',
+                    (
+                        notification_token,
+                        account_id,
+                        origin_id
+                    ))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return
+
+    except psycopg2.Error as Err:
+        conn.rollback()
+        conn.close()
+        raise Err
+
+
+def get_all_admin_notification_keys():
+    conn = get_auth_db_connection()
+    cur = conn.cursor()
+
+    cur.execute('''
+                SELECT DISTINCT s.push_notification_key
+                FROM account_sessions s
+                JOIN account a ON a.public_id = s.account_id
+                JOIN "user" u ON a.linked_user_id = u.user_id
+                WHERE s.invalidated = false
+                AND s.push_notification_key IS NOT NULL
+                AND u.permissions = 'admin'
+                ''')
+    response = cur.fetchall()
+    parsed_response = []
+    for row in response:
+        parsed_response.append(row[0])
+    cur.close()
+    conn.close()
+
+    return parsed_response
+
+
+def get_all_user_notification_keys():
+    conn = get_auth_db_connection()
+    cur = conn.cursor()
+
+    cur.execute('''
+                SELECT DISTINCT s.push_notification_key
+                FROM account_sessions s
+                JOIN account a ON a.public_id = s.account_id
+                WHERE s.invalidated = false
+                AND s.push_notification_key IS NOT NULL
+                ''')
+    response = cur.fetchall()
+    parsed_response = []
+    for row in response:
+        parsed_response.append(row[0])
+    cur.close()
+    conn.close()
+
+    return parsed_response
+
+
+def get_one_users_notification_keys(user_id: uuid):
+    conn = get_auth_db_connection()
+    cur = conn.cursor()
+
+    cur.execute('''
+                SELECT DISTINCT s.push_notification_key
+                FROM account_sessions s
+                JOIN account a ON a.public_id = s.account_id
+                JOIN "user" u ON a.linked_user_id = u.user_id
+                WHERE s.invalidated = false
+                AND s.push_notification_key IS NOT NULL
+                AND u.user_id = %s
+                ''',
+                (
+                    user_id,
+                ))
+    response = cur.fetchall()
+    parsed_response = []
+    for row in response:
+        parsed_response.append(row[0])
+    cur.close()
+    conn.close()
+
+    return parsed_response
+
+
+def get_one_account_notification_keys(account_id: uuid):
+    conn = get_auth_db_connection()
+    cur = conn.cursor()
+
+    cur.execute('''
+                SELECT DISTINCT s.push_notification_key
+                FROM account_sessions s
+                JOIN account a ON a.public_id = s.account_id
+                JOIN "user" u ON a.linked_user_id = u.user_id
+                WHERE s.invalidated = false
+                AND s.push_notification_key IS NOT NULL
+                AND a.public_id = %s
+                ''',
+                (
+                    account_id,
+                ))
+    response = cur.fetchall()
+    parsed_response = []
+    for row in response:
+        parsed_response.append(row[0])
+    cur.close()
+    conn.close()
+
+    return parsed_response

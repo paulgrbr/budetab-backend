@@ -358,7 +358,7 @@ def cleanup_expired_sessions():
         raise Err
 
 
-def update_account_session_notification_token(account_id: uuid, origin_id: uuid, notification_token: str):
+def update_account_session_notification_token(account_id: str, origin_id: str, notification_token: str) -> int:
     try:
         conn = get_public_db_connection()
         cur = conn.cursor()
@@ -375,10 +375,12 @@ def update_account_session_notification_token(account_id: uuid, origin_id: uuid,
                         account_id,
                         origin_id
                     ))
+
+        affected_rows = cur.rowcount
         conn.commit()
         cur.close()
         conn.close()
-        return
+        return affected_rows
 
     except psycopg2.Error as Err:
         conn.rollback()

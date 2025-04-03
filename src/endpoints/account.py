@@ -415,30 +415,46 @@ def handle_get_all_account_sessions():
         return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
 
 
-# Link the FCM token to the account
 @accounts.route("/notification", methods=['POST'])
 @jwt_required()
 def handle_link_notification_token_to_session():
     try:
-        # Extract the user ID from the JWT
         user_id = get_jwt_identity()
-        # Parse JSON data
         data = request.get_json()
 
         notification_token = data.get('notificationToken')
         origin_id = data.get('originId')
         if not notification_token or not origin_id:
-            return jsonify({"error": {"exception": "MissingValues",
-                           "message": "Missing notificationToken and originId"}, "message": None}), 400
+            return jsonify({
+                "error": {
+                    "exception": "MissingValues",
+                    "message": "Missing notificationToken and originId"
+                },
+                "message": None
+            }), 400
 
-        # Update the session
-        response = update_account_session_notification_token(user_id, origin_id, notification_token)
+        rows_updated = update_account_session_notification_token(user_id, origin_id, notification_token)
+
+        if rows_updated == 0:
+            return jsonify({
+                "error": {
+                    "exception": "SessionNotFound",
+                    "message": "No valid session found to update"
+                },
+                "message": None
+            }), 404
+
         return jsonify({
             "error": None,
-            'message': 'Notification token linked successfully'
+            "message": "Notification token linked successfully"
         }), 200
 
     except Exception as e:
-        # Log the error
         print(f"Unexpected error: {e}")
-        return jsonify({"error": {"exception": "Error", "message": "An unexpected error occurred"}, "message": None}), 500
+        return jsonify({
+            "error": {
+                "exception": "Error",
+                "message": "An unexpected error occurred"
+            },
+            "message": None
+        }), 500

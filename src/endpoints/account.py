@@ -248,7 +248,8 @@ def handle_link_user(public_id):
                            "message": "Please provide an userId to link account to"}, "message": None}), 400
 
         response = update_link_user_to_account(public_id, linked_user_id)
-        if not response["error"]:
+        data, status = response
+        if status == 200:
             linked_user = get_user_by_linked_account_uuid(public_id)
             fcm_notify_specific_account(
                 public_id,
@@ -258,6 +259,8 @@ def handle_link_user(public_id):
                                                                               linked_user.last_name}' verknüpft. Bitte melde dich nun erneut an! ",
                 sound=True,
             )
+
+        return jsonify(data), status
 
     except Exception as e:
         # Log the error

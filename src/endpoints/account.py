@@ -10,7 +10,7 @@ from database_service.account import check_token_id_is_active, cleanup_expired_s
 from database_service.sqlstate import map_sqlstate_to_http_status
 import re
 from database_service.user import get_user_by_linked_account_uuid
-from endpoints.fcm_service import fcm_notify_all_admins
+from endpoints.fcm_service import fcm_notify_all_admins, fcm_notify_specific_account
 from endpoints.jwt_handlers import roles_required
 from models.Account import Account
 
@@ -52,7 +52,7 @@ def handle_register():
                 "Neue Registrierung",
                 f"👤 '{username}' hat sich gerade registriert. Bitte verknüpfe den Account.",
                 sound=True,
-                route="/admin/all-accounts",
+                route="/admin",
             )
             return jsonify(response), 201
 
@@ -235,6 +235,10 @@ def handle_link_user(public_id):
         # Parse JSON data
         data = request.get_json()
 
+        # Extract the user ID from the JWT for notification
+        requester_user_id = get_jwt_identity()
+        requester_user = get_user_by_linked_account_uuid(requester_user_id)
+
         # Extract and validate username and password
         linked_user_id = data.get('userId')
 
@@ -243,7 +247,17 @@ def handle_link_user(public_id):
             return jsonify({"error": {"exception": "UserNotFound",
                            "message": "Please provide an userId to link account to"}, "message": None}), 400
 
-        return update_link_user_to_account(public_id, linked_user_id)
+        response = update_link_user_to_account(public_id, linked_user_id)
+        if not response["error"]:
+            linked_user = get_user_by_linked_account_uuid(public_id)
+            fcm_notify_specific_account(
+                public_id,
+                "Alles bereit!",
+                f"{requester_user.first_name} hat soeben deinen Account mit '{linked_user.first_name +
+                                                                              " " +
+                                                                              linked_user.last_name}' verknüpft. Bitte melde dich nun erneut an! ",
+                sound=True,
+            )
 
     except Exception as e:
         # Log the error
